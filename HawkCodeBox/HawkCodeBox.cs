@@ -60,6 +60,17 @@ namespace DevHawk.WPF
                 new FrameworkPropertyMetadata(true));
         }
 
+        public HawkCodeBox()
+        {
+            this.TextChanged += (s, e) => { this.InvalidateVisual(); };
+            this.Loaded += (s, e) =>
+                {
+                    var c = VisualTreeHelper.GetChild(this, 0);
+                    var sv = VisualTreeHelper.GetChild(c, 0) as ScrollViewer;
+                    sv.ScrollChanged += (s2, e2) => { this.InvalidateVisual(); };
+                };
+        }
+
         private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var codebox = (HawkCodeBox)d;
