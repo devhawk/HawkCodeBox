@@ -53,6 +53,8 @@ namespace DevHawk.WPF
                 new FrameworkPropertyMetadata(Brushes.Transparent, OnForegroundChanged));
             Control.BackgroundProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(OnBackgroundChanged));
+            Control.FontFamilyProperty.OverrideMetadata(typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(new FontFamily("Consolas")));
 
             TextBoxBase.AcceptsReturnProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(true));
