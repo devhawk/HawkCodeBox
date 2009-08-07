@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Controls.Primitives;
+using System.Globalization;
 
 namespace DevHawk.WPF
 {
@@ -95,6 +96,23 @@ namespace DevHawk.WPF
             DependencyProperty.Register("BackgroundColor", typeof(Color), typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(Colors.Black, FrameworkPropertyMetadataOptions.AffectsRender));
 
-        
+        protected override void OnRender(DrawingContext dc)
+        {
+            var ft = new FormattedText(
+                this.Text,
+                CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                new Typeface(this.FontFamily.Source),
+                this.FontSize,
+                new SolidColorBrush(this.ForegroundColor));
+
+            var left_margin = 4.0 + this.BorderThickness.Left;
+            var top_margin = 2.0 + this.BorderThickness.Top;
+
+            dc.PushClip(new RectangleGeometry(new Rect(0, 0, this.ActualWidth, this.ActualHeight)));
+
+            dc.DrawRectangle(new SolidColorBrush(this.BackgroundColor), new Pen(), new Rect(0, 0, this.ActualWidth, this.ActualHeight));
+            dc.DrawText(ft, new Point(left_margin - this.HorizontalOffset, top_margin - this.VerticalOffset));
+        }        
     }
 }
