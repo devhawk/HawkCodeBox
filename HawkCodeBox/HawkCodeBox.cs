@@ -48,10 +48,29 @@ namespace DevHawk.WPF
     {
         static HawkCodeBox()
         {
+            Control.ForegroundProperty.OverrideMetadata(typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(Brushes.Transparent, OnForegroundChanged));
+            Control.BackgroundProperty.OverrideMetadata(typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(Brushes.Transparent, OnBackgroundChanged));
+
             TextBoxBase.AcceptsReturnProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(true));
             TextBoxBase.AcceptsTabProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(true));
+        }
+
+        private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var cb = (HawkCodeBox)d;
+            if (cb.Foreground != Brushes.Transparent)
+                cb.Foreground = Brushes.Transparent;
+        }
+
+        private static void OnBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var cb = (HawkCodeBox)d;
+            if (cb.Background != Brushes.Transparent)
+                cb.Background = Brushes.Transparent;
         }
 
         public Color ForegroundColor
