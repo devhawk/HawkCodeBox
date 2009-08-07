@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Controls.Primitives;
 
 namespace DevHawk.WPF
 {
@@ -45,6 +46,14 @@ namespace DevHawk.WPF
     /// </summary>
     public class HawkCodeBox : TextBox
     {
+        static HawkCodeBox()
+        {
+            TextBoxBase.AcceptsReturnProperty.OverrideMetadata(typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(true));
+            TextBoxBase.AcceptsTabProperty.OverrideMetadata(typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(true));
+        }
+
         public Color ForegroundColor
         {
             get { return (Color)GetValue(ForegroundColorProperty); }
@@ -67,5 +76,6 @@ namespace DevHawk.WPF
             DependencyProperty.Register("BackgroundColor", typeof(Color), typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(Colors.Black, FrameworkPropertyMetadataOptions.AffectsRender));
 
+        
     }
 }
