@@ -1,3 +1,4 @@
 *.suo
-/HawkCodeBox/bin/*
-/HawkCodeBox/obj/*
+*/bin/*
+*/obj/*
+*/*.csproj.user

@@ -1,0 +1,7 @@
+﻿<Window x:Class="HawkCodeBox.Sample.Window1"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:devhawk="clr-namespace:DevHawk.WPF;assembly=HawkCodeBox"        
+    Title="Window1" Height="300" Width="300">
+    <devhawk:HawkCodeBox>This is a test</devhawk:HawkCodeBox>
+</Window>
