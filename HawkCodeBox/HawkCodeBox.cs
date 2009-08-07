@@ -52,7 +52,7 @@ namespace DevHawk.WPF
             Control.ForegroundProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(Brushes.Transparent, OnForegroundChanged));
             Control.BackgroundProperty.OverrideMetadata(typeof(HawkCodeBox),
-                new FrameworkPropertyMetadata(Brushes.Transparent, OnBackgroundChanged));
+                new FrameworkPropertyMetadata(OnBackgroundChanged));
 
             TextBoxBase.AcceptsReturnProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(true));
@@ -62,16 +62,17 @@ namespace DevHawk.WPF
 
         private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            var cb = (HawkCodeBox)d;
-            if (cb.Foreground != Brushes.Transparent)
-                cb.Foreground = Brushes.Transparent;
+            var codebox = (HawkCodeBox)d;
+            if (codebox.Foreground != Brushes.Transparent)
+                codebox.Foreground = Brushes.Transparent;
         }
 
         private static void OnBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            var cb = (HawkCodeBox)d;
-            if (cb.Background != Brushes.Transparent)
-                cb.Background = Brushes.Transparent;
+            var codebox = (HawkCodeBox)d;
+            var bgbrush = codebox.Background as SolidColorBrush;
+            if (bgbrush == null || bgbrush.Color != codebox.TransparentBackgroundColor)
+                codebox.Background = new SolidColorBrush(codebox.TransparentBackgroundColor);
         }
 
         public Color ForegroundColor
@@ -94,7 +95,21 @@ namespace DevHawk.WPF
         // Using a DependencyProperty as the backing store for BackgroundColor.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty BackgroundColorProperty =
             DependencyProperty.Register("BackgroundColor", typeof(Color), typeof(HawkCodeBox),
-                new FrameworkPropertyMetadata(Colors.Black, FrameworkPropertyMetadataOptions.AffectsRender));
+                new FrameworkPropertyMetadata(Colors.Black, FrameworkPropertyMetadataOptions.AffectsRender, OnBackgroundColorChanged));
+
+        static void OnBackgroundColorChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
+        {
+            var codebox = (HawkCodeBox)obj;
+            codebox.Background = new SolidColorBrush(codebox.TransparentBackgroundColor);
+        }
+
+        private Color TransparentBackgroundColor
+        {
+            get
+            {
+                return Color.FromArgb(0, BackgroundColor.R, BackgroundColor.G, BackgroundColor.B);
+            }
+        }
 
         protected override void OnRender(DrawingContext dc)
         {
