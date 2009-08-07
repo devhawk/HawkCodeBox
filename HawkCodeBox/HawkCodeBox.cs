@@ -45,5 +45,27 @@ namespace DevHawk.WPF
     /// </summary>
     public class HawkCodeBox : TextBox
     {
+        public Color ForegroundColor
+        {
+            get { return (Color)GetValue(ForegroundColorProperty); }
+            set { SetValue(ForegroundColorProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for ForegroundColor.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty ForegroundColorProperty =
+            DependencyProperty.Register("ForegroundColor", typeof(Color), typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(Colors.Red, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public Color BackgroundColor
+        {
+            get { return (Color)GetValue(BackgroundColorProperty); }
+            set { SetValue(BackgroundColorProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for BackgroundColor.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty BackgroundColorProperty =
+            DependencyProperty.Register("BackgroundColor", typeof(Color), typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(Colors.Black, FrameworkPropertyMetadataOptions.AffectsRender));
+
     }
 }
