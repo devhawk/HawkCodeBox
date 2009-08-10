@@ -13,6 +13,8 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Controls.Primitives;
 using System.Globalization;
+using Microsoft.Scripting.Hosting;
+using Microsoft.Scripting;
 
 namespace DevHawk.WPF
 {
@@ -62,6 +64,9 @@ namespace DevHawk.WPF
                 new FrameworkPropertyMetadata(true));
         }
 
+        ScriptEngine _engine;
+        TokenCategorizer _tokenizer;
+
         public HawkCodeBox()
         {
             this.TextChanged += (s, e) => { this.InvalidateVisual(); };
@@ -71,6 +76,9 @@ namespace DevHawk.WPF
                     var sv = VisualTreeHelper.GetChild(c, 0) as ScrollViewer;
                     sv.ScrollChanged += (s2, e2) => { this.InvalidateVisual(); };
                 };
+
+            _engine = IronPython.Hosting.Python.CreateEngine();
+            _tokenizer = _engine.GetService<Microsoft.Scripting.Hosting.TokenCategorizer>();
         }
 
         private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -97,7 +105,7 @@ namespace DevHawk.WPF
         // Using a DependencyProperty as the backing store for ForegroundColor.  This enables animation, styling, binding, etc...
         public static readonly DependencyProperty ForegroundColorProperty =
             DependencyProperty.Register("ForegroundColor", typeof(Color), typeof(HawkCodeBox),
-                new FrameworkPropertyMetadata(Colors.Red, FrameworkPropertyMetadataOptions.AffectsRender));
+                new FrameworkPropertyMetadata(Colors.White, FrameworkPropertyMetadataOptions.AffectsRender));
 
         public Color BackgroundColor
         {
@@ -124,6 +132,13 @@ namespace DevHawk.WPF
             }
         }
 
+        static Dictionary<TokenCategory, Brush> _map = new Dictionary<TokenCategory, Brush>()
+        {
+            { TokenCategory.Keyword, Brushes.LightBlue },
+            { TokenCategory.Comment, Brushes.LightGreen },
+            { TokenCategory.StringLiteral, Brushes.Salmon }
+        };
+        
         protected override void OnRender(DrawingContext dc)
         {
             var ft = new FormattedText(
@@ -140,6 +155,22 @@ namespace DevHawk.WPF
             dc.PushClip(new RectangleGeometry(new Rect(0, 0, this.ActualWidth, this.ActualHeight)));
 
             dc.DrawRectangle(new SolidColorBrush(this.BackgroundColor), new Pen(), new Rect(0, 0, this.ActualWidth, this.ActualHeight));
+
+            var source = _engine.CreateScriptSourceFromString(this.Text);
+            _tokenizer.Initialize(null, source, SourceLocation.MinValue);
+            while (true)
+            {
+                var t = _tokenizer.ReadToken();
+                if (t.Category == TokenCategory.EndOfStream)
+                    break;
+
+                if (_map.ContainsKey(t.Category))
+                {
+                    ft.SetForegroundBrush(_map[t.Category], t.SourceSpan.Start.Index, t.SourceSpan.Length);
+                }
+            }
+
+
             dc.DrawText(ft, new Point(left_margin - this.HorizontalOffset, top_margin - this.VerticalOffset));
         }        
     }
