@@ -64,23 +64,6 @@ namespace DevHawk.Windows.Controls
                 new FrameworkPropertyMetadata(true));
         }
 
-        ScriptEngine _engine;
-        TokenCategorizer _tokenizer;
-
-        public HawkCodeBox()
-        {
-            this.TextChanged += (s, e) => { this.InvalidateVisual(); };
-            this.Loaded += (s, e) =>
-                {
-                    var c = VisualTreeHelper.GetChild(this, 0);
-                    var sv = VisualTreeHelper.GetChild(c, 0) as ScrollViewer;
-                    sv.ScrollChanged += (s2, e2) => { this.InvalidateVisual(); };
-                };
-
-            _engine = IronPython.Hosting.Python.CreateEngine();
-            _tokenizer = _engine.GetService<Microsoft.Scripting.Hosting.TokenCategorizer>();
-        }
-
         private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var codebox = (HawkCodeBox)d;
@@ -96,10 +79,15 @@ namespace DevHawk.Windows.Controls
                 codebox.Background = new SolidColorBrush(codebox.TransparentBackgroundColor);
         }
 
-        public Color ForegroundColor
+        public HawkCodeBox()
         {
-            get { return (Color)GetValue(ForegroundColorProperty); }
-            set { SetValue(ForegroundColorProperty, value); }
+            this.TextChanged += (s, e) => { this.InvalidateVisual(); };
+            this.Loaded += (s, e) =>
+                {
+                    var c = VisualTreeHelper.GetChild(this, 0);
+                    var sv = VisualTreeHelper.GetChild(c, 0) as ScrollViewer;
+                    sv.ScrollChanged += (s2, e2) => { this.InvalidateVisual(); };
+                };
         }
 
         // Using a DependencyProperty as the backing store for ForegroundColor.  This enables animation, styling, binding, etc...
@@ -107,10 +95,10 @@ namespace DevHawk.Windows.Controls
             DependencyProperty.Register("ForegroundColor", typeof(Color), typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(Colors.White, FrameworkPropertyMetadataOptions.AffectsRender));
 
-        public Color BackgroundColor
+        public Color ForegroundColor
         {
-            get { return (Color)GetValue(BackgroundColorProperty); }
-            set { SetValue(BackgroundColorProperty, value); }
+            get { return (Color)GetValue(ForegroundColorProperty); }
+            set { SetValue(ForegroundColorProperty, value); }
         }
 
         // Using a DependencyProperty as the backing store for BackgroundColor.  This enables animation, styling, binding, etc...
@@ -118,17 +106,48 @@ namespace DevHawk.Windows.Controls
             DependencyProperty.Register("BackgroundColor", typeof(Color), typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(Colors.Black, FrameworkPropertyMetadataOptions.AffectsRender, OnBackgroundColorChanged));
 
+        public Color BackgroundColor
+        {
+            get { return (Color)GetValue(BackgroundColorProperty); }
+            set { SetValue(BackgroundColorProperty, value); }
+        }
+
         static void OnBackgroundColorChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
         {
             var codebox = (HawkCodeBox)obj;
             codebox.Background = new SolidColorBrush(codebox.TransparentBackgroundColor);
         }
 
+        public string DlrLanguage
+        {
+            get { return (string)GetValue(DlrLanguageProperty); }
+            set { SetValue(DlrLanguageProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for DlrLanguage.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty DlrLanguageProperty =
+            DependencyProperty.Register("DlrLanguage", typeof(string), typeof(HawkCodeBox));
+
         private Color TransparentBackgroundColor
         {
             get
             {
                 return Color.FromArgb(0, BackgroundColor.R, BackgroundColor.G, BackgroundColor.B);
+            }
+        }
+
+        ScriptEngine _engine;
+        private ScriptEngine Engine
+        {
+            get
+            {
+                if (_engine == null)
+                {
+                    var setup = ScriptRuntimeSetup.ReadConfiguration();
+                    var runtime = new ScriptRuntime(setup);
+                    _engine = runtime.GetEngine(this.DlrLanguage);
+                }
+                return _engine;
             }
         }
 
@@ -153,23 +172,25 @@ namespace DevHawk.Windows.Controls
             var top_margin = 2.0 + this.BorderThickness.Top;
 
             dc.PushClip(new RectangleGeometry(new Rect(0, 0, this.ActualWidth, this.ActualHeight)));
-
             dc.DrawRectangle(new SolidColorBrush(this.BackgroundColor), new Pen(), new Rect(0, 0, this.ActualWidth, this.ActualHeight));
 
-            var source = _engine.CreateScriptSourceFromString(this.Text);
-            _tokenizer.Initialize(null, source, SourceLocation.MinValue);
-            while (true)
+            if (!System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
             {
-                var t = _tokenizer.ReadToken();
-                if (t.Category == TokenCategory.EndOfStream)
-                    break;
-
-                if (_map.ContainsKey(t.Category))
+                var source = Engine.CreateScriptSourceFromString(this.Text);
+                var tokenizer = Engine.GetService<TokenCategorizer>();
+                tokenizer.Initialize(null, source, SourceLocation.MinValue);
+                while (true)
                 {
-                    ft.SetForegroundBrush(_map[t.Category], t.SourceSpan.Start.Index, t.SourceSpan.Length);
+                    var t = tokenizer.ReadToken();
+                    if (t.Category == TokenCategory.EndOfStream)
+                        break;
+
+                    if (_map.ContainsKey(t.Category))
+                    {
+                        ft.SetForegroundBrush(_map[t.Category], t.SourceSpan.Start.Index, t.SourceSpan.Length);
+                    }
                 }
             }
-
 
             dc.DrawText(ft, new Point(left_margin - this.HorizontalOffset, top_margin - this.VerticalOffset));
         }        

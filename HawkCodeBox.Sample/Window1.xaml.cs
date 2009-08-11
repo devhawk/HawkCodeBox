@@ -19,10 +19,8 @@ namespace HawkCodeBox.Sample
     /// </summary>
     public partial class Window1 : Window
     {
-        public Window1()
-        {
-            InitializeComponent();
-            codebox.Text = @"import clr
+        string _python_code = @"#this is a Python test
+import clr
 clr.AddReference(""pygments"")
 
 from pygments import highlight
@@ -42,6 +40,53 @@ def generate_html(code, lexer_name, style_name):
   if not style_name: style_name = ""default""
   lexer = get_lexer_by_name(lexer_name)
   return highlight(code, lexer, DevHawkHtmlFormatter(style=style_name))";
+
+        string _ruby_code = @"#this is a Ruby test
+require 'erb'
+
+class App 
+  def call env
+    request  = Rack::Request.new env
+    response = Rack::Response.new
+
+    response.header['Content-Type'] = 'text/html'
+
+    @msg1 = ""Hello""
+    @msg2 = ""World""
+    msg = ERB.new('IronRuby running Rack says ""<%= @msg1 %>, <b><%= @msg2 %></b>"" at <%= Time.now %>').result(binding)
+
+    response.write msg
+
+    response.finish
+  end
+end";
+
+        public Window1()
+        {
+            InitializeComponent();
+            SetPython();
+        }
+
+        private void PythonMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            SetPython();
+        }
+
+        private void RubyMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            SetRuby();
+        }
+
+        void SetPython()
+        {
+            codebox.DlrLanguage = "Python";
+            codebox.Text = _python_code;
+        }
+
+        void SetRuby()
+        {
+            codebox.DlrLanguage = "Ruby";
+            codebox.Text = _ruby_code;
         }
     }
 }
