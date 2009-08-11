@@ -8,7 +8,7 @@
     <ProjectGuid>{7049D441-A36D-4578-83CF-D431671C7E23}</ProjectGuid>
     <OutputType>library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DevHawk.WPF</RootNamespace>
+    <RootNamespace>DevHawk.Windows.Controls</RootNamespace>
     <AssemblyName>HawkCodeBox</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
