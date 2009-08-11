@@ -55,32 +55,44 @@ namespace DevHawk.Windows.Controls
                 new FrameworkPropertyMetadata(Brushes.Transparent, OnForegroundChanged));
             Control.BackgroundProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(OnBackgroundChanged));
+
+            //Since this is a text box for code, the default settings for a few of the 
+            //properties should be different (fixed width font, accepts return and tab)
             Control.FontFamilyProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(new FontFamily("Consolas")));
-
             TextBoxBase.AcceptsReturnProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(true));
             TextBoxBase.AcceptsTabProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(true));
         }
 
+        //Foreground must be the transparent brush for HawkCodeBox to work. If someone tries to set it
+        //To something other than Transparent, this function changes it back
         private static void OnForegroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            var codebox = (HawkCodeBox)d;
-            if (codebox.Foreground != Brushes.Transparent)
-                codebox.Foreground = Brushes.Transparent;
+            if (e.NewValue != Brushes.Transparent)
+            {
+                ((HawkCodeBox)d).Foreground = Brushes.Transparent;
+            }
         }
 
+        //Like Foreground, Background must also be transparent. if someone tries to change it, this function 
+        //changes it back. However, decorations like the caret and text selection box base their color on the 
+        //Background property. Thus, we set it to a transparent version of the background color, provided by 
+        //the TransparentBackgroundColor property on HawkCodeBox
         private static void OnBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var codebox = (HawkCodeBox)d;
-            var bgbrush = codebox.Background as SolidColorBrush;
+            var bgbrush = e.NewValue as SolidColorBrush;
             if (bgbrush == null || bgbrush.Color != codebox.TransparentBackgroundColor)
+            {
                 codebox.Background = new SolidColorBrush(codebox.TransparentBackgroundColor);
+            }
         }
 
         public HawkCodeBox()
         {
+            //TODO: track where the text has changed so the control doesn't have to re-colorize the entire buffer
             this.TextChanged += (s, e) => { this.InvalidateVisual(); };
             this.Loaded += (s, e) =>
                 {
@@ -90,18 +102,18 @@ namespace DevHawk.Windows.Controls
                 };
         }
 
-        // Using a DependencyProperty as the backing store for ForegroundColor.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty ForegroundColorProperty =
+        //Using a DependencyProperty to manage the default foreground color for the text in the text box
+        public static readonly DependencyProperty DefaultForegroundColorProperty =
             DependencyProperty.Register("ForegroundColor", typeof(Color), typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(Colors.White, FrameworkPropertyMetadataOptions.AffectsRender));
 
-        public Color ForegroundColor
+        public Color DefaultForegroundColor
         {
-            get { return (Color)GetValue(ForegroundColorProperty); }
-            set { SetValue(ForegroundColorProperty, value); }
+            get { return (Color)GetValue(DefaultForegroundColorProperty); }
+            set { SetValue(DefaultForegroundColorProperty, value); }
         }
 
-        // Using a DependencyProperty as the backing store for BackgroundColor.  This enables animation, styling, binding, etc...
+        //using a DependencyProperty to manage the background color for the text box
         public static readonly DependencyProperty BackgroundColorProperty =
             DependencyProperty.Register("BackgroundColor", typeof(Color), typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(Colors.Black, FrameworkPropertyMetadataOptions.AffectsRender, OnBackgroundColorChanged));
@@ -112,22 +124,24 @@ namespace DevHawk.Windows.Controls
             set { SetValue(BackgroundColorProperty, value); }
         }
 
+        //If the background color changes, we need to reset the background to a new transparent brush
         static void OnBackgroundColorChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
         {
             var codebox = (HawkCodeBox)obj;
             codebox.Background = new SolidColorBrush(codebox.TransparentBackgroundColor);
         }
 
+        //Using a DependencyProperty to store the DLR language name used to colorize the text
+        public static readonly DependencyProperty DlrLanguageProperty =
+            DependencyProperty.Register("DlrLanguage", typeof(string), typeof(HawkCodeBox));
+
         public string DlrLanguage
         {
             get { return (string)GetValue(DlrLanguageProperty); }
             set { SetValue(DlrLanguageProperty, value); }
         }
-
-        // Using a DependencyProperty as the backing store for DlrLanguage.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty DlrLanguageProperty =
-            DependencyProperty.Register("DlrLanguage", typeof(string), typeof(HawkCodeBox));
-
+        
+        //helper property to provide a transparent version of the current Background color
         private Color TransparentBackgroundColor
         {
             get
@@ -136,28 +150,33 @@ namespace DevHawk.Windows.Controls
             }
         }
 
-        ScriptEngine _engine;
+        //helper property to retrieve the engine for the current language
+        ScriptRuntime _runtime;
         private ScriptEngine Engine
         {
             get
             {
-                if (_engine == null)
+                if (_runtime == null)
                 {
                     var setup = ScriptRuntimeSetup.ReadConfiguration();
-                    var runtime = new ScriptRuntime(setup);
-                    _engine = runtime.GetEngine(this.DlrLanguage);
+                    _runtime = new ScriptRuntime(setup);
                 }
-                return _engine;
+                return _runtime.GetEngine(this.DlrLanguage);
             }
         }
 
+        //TODO: change _map to be specified in the Control XAML
         static Dictionary<TokenCategory, Brush> _map = new Dictionary<TokenCategory, Brush>()
         {
             { TokenCategory.Keyword, Brushes.LightBlue },
+            { TokenCategory.Identifier, Brushes.LightYellow },
             { TokenCategory.Comment, Brushes.LightGreen },
-            { TokenCategory.StringLiteral, Brushes.Salmon }
+            { TokenCategory.LineComment, Brushes.LightGreen },
+            { TokenCategory.StringLiteral, Brushes.Salmon },
+            { TokenCategory.Operator, Brushes.Purple }
         };
         
+        //Render the text in the text box
         protected override void OnRender(DrawingContext dc)
         {
             var ft = new FormattedText(
@@ -166,7 +185,7 @@ namespace DevHawk.Windows.Controls
                 FlowDirection.LeftToRight,
                 new Typeface(this.FontFamily.Source),
                 this.FontSize,
-                new SolidColorBrush(this.ForegroundColor));
+                new SolidColorBrush(this.DefaultForegroundColor));
 
             var left_margin = 4.0 + this.BorderThickness.Left;
             var top_margin = 2.0 + this.BorderThickness.Top;
@@ -174,6 +193,7 @@ namespace DevHawk.Windows.Controls
             dc.PushClip(new RectangleGeometry(new Rect(0, 0, this.ActualWidth, this.ActualHeight)));
             dc.DrawRectangle(new SolidColorBrush(this.BackgroundColor), new Pen(), new Rect(0, 0, this.ActualWidth, this.ActualHeight));
 
+            //at design time, we won't have access to any DLR language assemblies, so don't try to colorize
             if (!System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
             {
                 var source = Engine.CreateScriptSourceFromString(this.Text);
