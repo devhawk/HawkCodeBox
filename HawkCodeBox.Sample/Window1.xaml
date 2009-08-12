@@ -1,20 +1,29 @@
 ﻿<Window x:Class="HawkCodeBox.Sample.Window1"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:devhawk="clr-namespace:DevHawk.Windows.Controls;assembly=HawkCodeBox"        
+    xmlns:devhawk="clr-namespace:DevHawk.Windows.Controls;assembly=HawkCodeBox"  
     Title="Window1" Height="800" Width="800">
 
-    
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="25" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-            <Menu>
-                <MenuItem Header="Python" Click="PythonMenuItem_Click" />
-                <MenuItem Header="Ruby" Click="RubyMenuItem_Click" />
-            </Menu>
-        <devhawk:HawkCodeBox x:Name="codebox" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontSize="16" Grid.Row="1"></devhawk:HawkCodeBox>
-        
+        <Menu>
+            <MenuItem Header="Python" Click="PythonMenuItem_Click" />
+            <MenuItem Header="Ruby" Click="RubyMenuItem_Click" />
+        </Menu>
+        <devhawk:HawkCodeBox x:Name="codebox" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontSize="16" Grid.Row="1">
+            <devhawk:HawkCodeBox.SyntaxColors>
+                <devhawk:SyntaxItem Color="#8AC5FF" TokenCategory="Keyword"/>
+                <devhawk:SyntaxItem Color="#FF8040" TokenCategory="StringLiteral"/>
+                <devhawk:SyntaxItem Color="#FF00FF" TokenCategory="Error"/>
+                <devhawk:SyntaxItem Color="#FFFF80" TokenCategory="NumericLiteral"/>
+                <devhawk:SyntaxItem Color="#80FF00" TokenCategory="Comment"/>
+                <devhawk:SyntaxItem Color="#80FF00" TokenCategory="LineComment"/>
+            </devhawk:HawkCodeBox.SyntaxColors>
+        </devhawk:HawkCodeBox>
+
     </Grid>
 </Window>

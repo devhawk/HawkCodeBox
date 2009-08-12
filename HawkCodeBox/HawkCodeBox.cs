@@ -18,6 +18,26 @@ using Microsoft.Scripting;
 
 namespace DevHawk.Windows.Controls
 {
+    public class SyntaxItem
+    {
+        public TokenCategory TokenCategory { get; set; }
+        public Color Color { get; set; }
+
+        public SyntaxItem()
+        {
+        }
+
+        public SyntaxItem(TokenCategory category, Color color)
+        {
+            TokenCategory = category;
+            Color = color;
+        }
+    }
+
+    public class SyntaxItemCollection : List<SyntaxItem>
+    {
+    }
+
     /// <summary>
     /// Follow steps 1a or 1b and then 2 to use this custom control in a XAML file.
     ///
@@ -165,17 +185,55 @@ namespace DevHawk.Windows.Controls
             }
         }
 
-        //TODO: change _map to be specified in the Control XAML
-        static Dictionary<TokenCategory, Brush> _map = new Dictionary<TokenCategory, Brush>()
+        public SyntaxItemCollection SyntaxColors
         {
-            { TokenCategory.Keyword, Brushes.LightBlue },
-            { TokenCategory.Identifier, Brushes.LightYellow },
-            { TokenCategory.Comment, Brushes.LightGreen },
-            { TokenCategory.LineComment, Brushes.LightGreen },
-            { TokenCategory.StringLiteral, Brushes.Salmon },
-            { TokenCategory.Operator, Brushes.Purple }
-        };
-        
+            get { return (SyntaxItemCollection)GetValue(SyntaxColorsProperty); }
+            set { SetValue(SyntaxColorsProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for MyProperty.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty SyntaxColorsProperty =
+            DependencyProperty.Register("SyntaxColors", typeof(SyntaxItemCollection), typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(new SyntaxItemCollection(), OnSyntaxColorsChanged));
+
+        Dictionary<TokenCategory, Brush> _map;
+
+        static void OnSyntaxColorsChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
+        {
+            ((HawkCodeBox)obj)._map = null;
+        }
+
+        IDictionary<TokenCategory, Brush> _SyntaxMap
+        {
+            get
+            {
+                if (_map == null)
+                {
+                    _map = new Dictionary<TokenCategory, Brush>();
+
+                    if (SyntaxColors.Count == 0)
+                    {
+                        _map[TokenCategory.NumericLiteral] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xEE, 0x98));
+                        _map[TokenCategory.Keyword] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x66, 0x00));
+                        _map[TokenCategory.Identifier] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xCC, 0x00));
+                        _map[TokenCategory.StringLiteral] = new SolidColorBrush(Color.FromArgb(0xFF, 0x66, 0xFF, 0x00));
+                        _map[TokenCategory.Comment] = new SolidColorBrush(Color.FromArgb(0xFF, 0x99, 0x33, 0xCC));
+                        _map[TokenCategory.LineComment] = new SolidColorBrush(Color.FromArgb(0xFF, 0x99, 0x33, 0xCC));
+                        _map[TokenCategory.Error] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x00, 0x00));
+                    }
+                    else
+                    {
+                        foreach (var s in SyntaxColors)
+                        {
+                            _map[s.TokenCategory] = new SolidColorBrush(s.Color);
+                        }
+                    }
+                }
+
+                return _map;
+            }
+        }
+
         //Render the text in the text box
         protected override void OnRender(DrawingContext dc)
         {
@@ -205,7 +263,7 @@ namespace DevHawk.Windows.Controls
                     if (t.Category == TokenCategory.EndOfStream)
                         break;
 
-                    if (_map.ContainsKey(t.Category))
+                    if (_SyntaxMap.ContainsKey(t.Category))
                     {
                         ft.SetForegroundBrush(_map[t.Category], t.SourceSpan.Start.Index, t.SourceSpan.Length);
                     }
