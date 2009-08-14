@@ -153,7 +153,8 @@ namespace DevHawk.Windows.Controls
 
         //Using a DependencyProperty to store the DLR language name used to colorize the text
         public static readonly DependencyProperty DlrLanguageProperty =
-            DependencyProperty.Register("DlrLanguage", typeof(string), typeof(HawkCodeBox));
+            DependencyProperty.Register("DlrLanguage", typeof(string), typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
         public string DlrLanguage
         {
