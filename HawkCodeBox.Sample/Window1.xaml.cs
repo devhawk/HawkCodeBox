@@ -19,6 +19,7 @@ namespace HawkCodeBox.Sample
     /// </summary>
     public partial class Window1 : Window
     {
+        //This is just some random sample Python code I had
         string _python_code = @"#this is a Python test
 import clr
 clr.AddReference(""pygments"")
@@ -41,6 +42,7 @@ def generate_html(code, lexer_name, style_name):
   lexer = get_lexer_by_name(lexer_name)
   return highlight(code, lexer, DevHawkHtmlFormatter(style=style_name))";
 
+        //This is just some random sample Ruby code I had
         string _ruby_code = @"#this is a Ruby test
 require 'erb'
 

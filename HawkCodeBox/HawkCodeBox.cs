@@ -18,26 +18,6 @@ using Microsoft.Scripting;
 
 namespace DevHawk.Windows.Controls
 {
-    public class SyntaxItem
-    {
-        public TokenCategory TokenCategory { get; set; }
-        public Color Color { get; set; }
-
-        public SyntaxItem()
-        {
-        }
-
-        public SyntaxItem(TokenCategory category, Color color)
-        {
-            TokenCategory = category;
-            Color = color;
-        }
-    }
-
-    public class SyntaxItemCollection : List<SyntaxItem>
-    {
-    }
-
     /// <summary>
     /// Follow steps 1a or 1b and then 2 to use this custom control in a XAML file.
     ///
@@ -45,14 +25,14 @@ namespace DevHawk.Windows.Controls
     /// Add this XmlNamespace attribute to the root element of the markup file where it is 
     /// to be used:
     ///
-    ///     xmlns:MyNamespace="clr-namespace:DevHawk.Windows.Controls"
+    ///     xmlns:devhawk="clr-namespace:DevHawk.Windows.Controls"
     ///
     ///
     /// Step 1b) Using this custom control in a XAML file that exists in a different project.
     /// Add this XmlNamespace attribute to the root element of the markup file where it is 
     /// to be used:
     ///
-    ///     xmlns:MyNamespace="clr-namespace:DevHawk.Windows.Controls;assembly=HawkCodeBox"
+    ///     xmlns:devhawk="clr-namespace:DevHawk.Windows.Controls;assembly=HawkCodeBox"
     ///
     /// You will also need to add a project reference from the project where the XAML file lives
     /// to this project and Rebuild to avoid compilation errors:
@@ -63,14 +43,16 @@ namespace DevHawk.Windows.Controls
     ///
     /// Step 2)
     /// Go ahead and use your control in the XAML file.
-    ///
-    ///     <MyNamespace:HawkCodeBox/>
+    /// 
+    ///     <devhawk:HawkCodeBox/>
     ///
     /// </summary>
     public class HawkCodeBox : TextBox
     {
         static HawkCodeBox()
         {
+            //override the metadata of Foreground and Background properties so that 
+            //the control can set them back to the correct value if they are changed.
             Control.ForegroundProperty.OverrideMetadata(typeof(HawkCodeBox),
                 new FrameworkPropertyMetadata(Brushes.Transparent, OnForegroundChanged));
             Control.BackgroundProperty.OverrideMetadata(typeof(HawkCodeBox),
@@ -98,15 +80,16 @@ namespace DevHawk.Windows.Controls
 
         //Like Foreground, Background must also be transparent. if someone tries to change it, this function 
         //changes it back. However, decorations like the caret and text selection box base their color on the 
-        //Background property. Thus, we set it to a transparent version of the background color, provided by 
-        //the TransparentBackgroundColor property on HawkCodeBox
+        //Background property. Thus, set the background to a transparent version of the background color, 
+        //provided by the TransparentBackgroundColor property on HawkCodeBox
         private static void OnBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             var codebox = (HawkCodeBox)d;
+            var transparent_bg = codebox.GetTransparentBackgroundColor();
             var bgbrush = e.NewValue as SolidColorBrush;
-            if (bgbrush == null || bgbrush.Color != codebox.TransparentBackgroundColor)
+            if (bgbrush == null || bgbrush.Color != transparent_bg)
             {
-                codebox.Background = new SolidColorBrush(codebox.TransparentBackgroundColor);
+                codebox.Background = new SolidColorBrush(transparent_bg);
             }
         }
 
@@ -144,11 +127,12 @@ namespace DevHawk.Windows.Controls
             set { SetValue(BackgroundColorProperty, value); }
         }
 
-        //If the background color changes, we need to reset the background to a new transparent brush
+        //If the background color changes, we need to reset the Background property to a new transparent 
+        //brush in order to keep the caret and text selection adornments
         static void OnBackgroundColorChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
         {
             var codebox = (HawkCodeBox)obj;
-            codebox.Background = new SolidColorBrush(codebox.TransparentBackgroundColor);
+            codebox.Background = new SolidColorBrush(codebox.GetTransparentBackgroundColor());
         }
 
         //Using a DependencyProperty to store the DLR language name used to colorize the text
@@ -163,12 +147,9 @@ namespace DevHawk.Windows.Controls
         }
         
         //helper property to provide a transparent version of the current Background color
-        private Color TransparentBackgroundColor
+        private Color GetTransparentBackgroundColor()
         {
-            get
-            {
-                return Color.FromArgb(0, BackgroundColor.R, BackgroundColor.G, BackgroundColor.B);
-            }
+            return Color.FromArgb(0, BackgroundColor.R, BackgroundColor.G, BackgroundColor.B);
         }
 
         //helper property to retrieve the engine for the current language
@@ -186,56 +167,63 @@ namespace DevHawk.Windows.Controls
             }
         }
 
+        // Using a DependencyProperty as the backing store for SyntaxColors collection.  
+        public static readonly DependencyProperty SyntaxColorsProperty =
+            DependencyProperty.Register("SyntaxColors", typeof(SyntaxItemCollection), typeof(HawkCodeBox),
+                new FrameworkPropertyMetadata(new SyntaxItemCollection(), OnSyntaxColorsChanged));
+
         public SyntaxItemCollection SyntaxColors
         {
             get { return (SyntaxItemCollection)GetValue(SyntaxColorsProperty); }
             set { SetValue(SyntaxColorsProperty, value); }
         }
 
-        // Using a DependencyProperty as the backing store for MyProperty.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty SyntaxColorsProperty =
-            DependencyProperty.Register("SyntaxColors", typeof(SyntaxItemCollection), typeof(HawkCodeBox),
-                new FrameworkPropertyMetadata(new SyntaxItemCollection(), OnSyntaxColorsChanged));
-
-        Dictionary<TokenCategory, Brush> _map;
-
+        //if the syntax colors collection changes, discard the cached dictionary of syntax colors 
         static void OnSyntaxColorsChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
         {
-            ((HawkCodeBox)obj)._map = null;
+            ((HawkCodeBox)obj)._syntaxMap = null;
         }
 
-        IDictionary<TokenCategory, Brush> _SyntaxMap
+        //Cached version of the syntax colors dictionary
+        private Dictionary<TokenCategory, Brush> _syntaxMap;
+
+        //Helper property to cache the syntax colors dictionary for future use, as well as specify 
+        //a default color scheme if the user doesn't provide one
+        private IDictionary<TokenCategory, Brush> SyntaxMap
         {
             get
             {
-                if (_map == null)
+                if (_syntaxMap == null)
                 {
-                    _map = new Dictionary<TokenCategory, Brush>();
+                    _syntaxMap = new Dictionary<TokenCategory, Brush>();
 
                     if (SyntaxColors.Count == 0)
                     {
-                        _map[TokenCategory.NumericLiteral] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xEE, 0x98));
-                        _map[TokenCategory.Keyword] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x66, 0x00));
-                        _map[TokenCategory.Identifier] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xCC, 0x00));
-                        _map[TokenCategory.StringLiteral] = new SolidColorBrush(Color.FromArgb(0xFF, 0x66, 0xFF, 0x00));
-                        _map[TokenCategory.Comment] = new SolidColorBrush(Color.FromArgb(0xFF, 0x99, 0x33, 0xCC));
-                        _map[TokenCategory.LineComment] = new SolidColorBrush(Color.FromArgb(0xFF, 0x99, 0x33, 0xCC));
-                        _map[TokenCategory.Error] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x00, 0x00));
+                        //If there are not syntax colors specificed, use the following default color scheme
+                        _syntaxMap[TokenCategory.NumericLiteral] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xEE, 0x98));
+                        _syntaxMap[TokenCategory.Keyword] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x66, 0x00));
+                        _syntaxMap[TokenCategory.Identifier] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xCC, 0x00));
+                        _syntaxMap[TokenCategory.StringLiteral] = new SolidColorBrush(Color.FromArgb(0xFF, 0x66, 0xFF, 0x00));
+                        _syntaxMap[TokenCategory.Comment] = new SolidColorBrush(Color.FromArgb(0xFF, 0xD1, 0x74, 0xFF));
+                        _syntaxMap[TokenCategory.LineComment] = new SolidColorBrush(Color.FromArgb(0xFF, 0xD1, 0x74, 0xFF));
+                        _syntaxMap[TokenCategory.Error] = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x00, 0x00));
                     }
                     else
                     {
                         foreach (var s in SyntaxColors)
                         {
-                            _map[s.TokenCategory] = new SolidColorBrush(s.Color);
+                            _syntaxMap[s.TokenCategory] = new SolidColorBrush(s.Color);
                         }
                     }
                 }
 
-                return _map;
+                return _syntaxMap;
             }
         }
 
-        //Render the text in the text box
+        //Render the text in the text box, using the specified background color and syntax
+        //color scheme. The original rendering done by the text box is invisible as both 
+        //the foreground and background brushes are transparent
         protected override void OnRender(DrawingContext dc)
         {
             var ft = new FormattedText(
@@ -246,6 +234,8 @@ namespace DevHawk.Windows.Controls
                 this.FontSize,
                 new SolidColorBrush(this.DefaultForegroundColor));
 
+            //We specify the left and top margins to match the original rendering exactly. 
+            //that way, the original caret and text selection adornments line up correctly.
             var left_margin = 4.0 + this.BorderThickness.Left;
             var top_margin = 2.0 + this.BorderThickness.Top;
 
@@ -264,14 +254,29 @@ namespace DevHawk.Windows.Controls
                     if (t.Category == TokenCategory.EndOfStream)
                         break;
 
-                    if (_SyntaxMap.ContainsKey(t.Category))
+                    if (SyntaxMap.ContainsKey(t.Category))
                     {
-                        ft.SetForegroundBrush(_map[t.Category], t.SourceSpan.Start.Index, t.SourceSpan.Length);
+                        ft.SetForegroundBrush(_syntaxMap[t.Category], t.SourceSpan.Start.Index, t.SourceSpan.Length);
                     }
                 }
             }
 
             dc.DrawText(ft, new Point(left_margin - this.HorizontalOffset, top_margin - this.VerticalOffset));
         }        
+    }
+
+    /// <summary>
+    /// Simple helper class to allow users to specify syntax color schemes in XAML
+    /// </summary>
+    public class SyntaxItem
+    {
+        public TokenCategory TokenCategory { get; set; }
+        public Color Color { get; set; }
+    }
+
+    //XAML appears to have an issue with generic collections, so define a simple 
+    //non-generic list to contain the SyntaxItems
+    public class SyntaxItemCollection : List<SyntaxItem>
+    {
     }
 }

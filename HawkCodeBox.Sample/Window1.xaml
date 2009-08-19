@@ -15,14 +15,15 @@
             <MenuItem Header="Ruby" Click="RubyMenuItem_Click" />
         </Menu>
         <devhawk:HawkCodeBox x:Name="codebox" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontSize="16" Grid.Row="1">
-            <devhawk:HawkCodeBox.SyntaxColors>
+            <!-- If you want to use an alternative color scheme, uncomment the following element -->
+            <!--<devhawk:HawkCodeBox.SyntaxColors>
                 <devhawk:SyntaxItem Color="#8AC5FF" TokenCategory="Keyword"/>
                 <devhawk:SyntaxItem Color="#FF8040" TokenCategory="StringLiteral"/>
                 <devhawk:SyntaxItem Color="#FF00FF" TokenCategory="Error"/>
                 <devhawk:SyntaxItem Color="#FFFF80" TokenCategory="NumericLiteral"/>
                 <devhawk:SyntaxItem Color="#80FF00" TokenCategory="Comment"/>
                 <devhawk:SyntaxItem Color="#80FF00" TokenCategory="LineComment"/>
-            </devhawk:HawkCodeBox.SyntaxColors>
+            </devhawk:HawkCodeBox.SyntaxColors>-->
         </devhawk:HawkCodeBox>
 
     </Grid>
