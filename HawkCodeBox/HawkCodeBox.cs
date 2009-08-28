@@ -49,65 +49,8 @@ namespace DevHawk.Windows.Controls
     /// </summary>
     public class HawkCodeBox : HawkCodeBoxBase
     {
-        public HawkCodeBox()
+        protected override IEnumerable<TokenInfo> TokenizeText()
         {
-            //TODO: track where the text has changed so the control doesn't have to re-colorize the entire buffer
-            this.TextChanged += (s, e) => { this.InvalidateVisual(); };
-            this.Loaded += (s, e) =>
-                {
-                    var c = VisualTreeHelper.GetChild(this, 0);
-                    var sv = VisualTreeHelper.GetChild(c, 0) as ScrollViewer;
-                    sv.ScrollChanged += (s2, e2) => { this.InvalidateVisual(); };
-                };
-        }
-
-        //Using a DependencyProperty to store the DLR language name used to colorize the text
-        public static readonly DependencyProperty DlrLanguageProperty =
-            DependencyProperty.Register("DlrLanguage", typeof(string), typeof(HawkCodeBox),
-                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
-
-        public string DlrLanguage
-        {
-            get { return (string)GetValue(DlrLanguageProperty); }
-            set { SetValue(DlrLanguageProperty, value); }
-        }
-        
-        //helper property to retrieve the engine for the current language
-        ScriptRuntime _runtime;
-        private ScriptEngine Engine
-        {
-            get
-            {
-                if (_runtime == null)
-                {
-                    var setup = ScriptRuntimeSetup.ReadConfiguration();
-                    _runtime = new ScriptRuntime(setup);
-                }
-                return _runtime.GetEngine(this.DlrLanguage);
-            }
-        }
-
-        //Render the text in the text box, using the specified background color and syntax
-        //color scheme. The original rendering done by the text box is invisible as both 
-        //the foreground and background brushes are transparent
-        protected override void OnRender(DrawingContext dc)
-        {
-            var ft = new FormattedText(
-                this.Text,
-                CultureInfo.CurrentCulture,
-                FlowDirection.LeftToRight,
-                new Typeface(this.FontFamily.Source),
-                this.FontSize,
-                new SolidColorBrush(this.DefaultForegroundColor));
-
-            //We specify the left and top margins to match the original rendering exactly. 
-            //that way, the original caret and text selection adornments line up correctly.
-            var left_margin = 4.0 + this.BorderThickness.Left;
-            var top_margin = 2.0 + this.BorderThickness.Top;
-
-            dc.PushClip(new RectangleGeometry(new Rect(0, 0, this.ActualWidth, this.ActualHeight)));
-            dc.DrawRectangle(new SolidColorBrush(this.BackgroundColor), new Pen(), new Rect(0, 0, this.ActualWidth, this.ActualHeight));
-
             //at design time, we won't have access to any DLR language assemblies, so don't try to colorize
             if (!System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
             {
@@ -117,18 +60,12 @@ namespace DevHawk.Windows.Controls
                 while (true)
                 {
                     var t = tokenizer.ReadToken();
+                    yield return t;
                     if (t.Category == TokenCategory.EndOfStream)
                         break;
-
-                    if (SyntaxMap.ContainsKey(t.Category))
-                    {
-                        ft.SetForegroundBrush(SyntaxMap[t.Category], t.SourceSpan.Start.Index, t.SourceSpan.Length);
-                    }
                 }
             }
-
-            dc.DrawText(ft, new Point(left_margin - this.HorizontalOffset, top_margin - this.VerticalOffset));
-        }        
+        }
     }
 
 
