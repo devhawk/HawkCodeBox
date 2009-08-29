@@ -59,14 +59,18 @@ namespace DevHawk.Windows.Controls
 
         public HawkCodeBoxBase()
         {
-            //TODO: track where the text has changed so the control doesn't have to re-colorize the entire buffer
-            this.TextChanged += (s, e) => { this.InvalidateVisual(); };
             this.Loaded += (s, e) =>
                 {
                     var c = VisualTreeHelper.GetChild(this, 0);
                     var sv = VisualTreeHelper.GetChild(c, 0) as ScrollViewer;
                     sv.ScrollChanged += (s2, e2) => { this.InvalidateVisual(); };
                 };
+        }
+
+        protected override void OnTextChanged(TextChangedEventArgs e)
+        {
+            base.OnTextChanged(e);
+            this.InvalidateVisual();
         }
 
         //Using a DependencyProperty to manage the default foreground color for the text in the text box
