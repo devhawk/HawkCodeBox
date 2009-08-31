@@ -81,13 +81,13 @@ end";
 
         void SetPython()
         {
-            codebox.DlrLanguage = "Python";
+            codebox.Language = "Python";
             codebox.Text = _python_code;
         }
 
         void SetRuby()
         {
-            codebox.DlrLanguage = "Ruby";
+            codebox.Language = "Ruby";
             codebox.Text = _ruby_code;
         }
     }

@@ -49,6 +49,32 @@ namespace DevHawk.Windows.Controls
     /// </summary>
     public class HawkCodeBox : HawkCodeBoxBase
     {
+        //Using a DependencyProperty to store the DLR language name used to colorize the text
+        public static readonly DependencyProperty LanguageProperty =
+            DependencyProperty.Register("Language", typeof(string), typeof(HawkCodeBoxBase),
+                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public string Language
+        {
+            get { return (string)GetValue(LanguageProperty); }
+            set { SetValue(LanguageProperty, value); }
+        }
+
+        //helper property to retrieve the engine for the current language
+        ScriptRuntime _runtime;
+        protected ScriptEngine Engine
+        {
+            get
+            {
+                if (_runtime == null)
+                {
+                    var setup = ScriptRuntimeSetup.ReadConfiguration();
+                    _runtime = new ScriptRuntime(setup);
+                }
+                return _runtime.GetEngine(this.Language);
+            }
+        }
+
         class CachedToken
         {
             public TokenInfo Token { get; set; }

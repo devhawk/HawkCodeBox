@@ -163,32 +163,6 @@ namespace DevHawk.Windows.Controls
             }
         }
 
-        //Using a DependencyProperty to store the DLR language name used to colorize the text
-        public static readonly DependencyProperty DlrLanguageProperty =
-            DependencyProperty.Register("DlrLanguage", typeof(string), typeof(HawkCodeBoxBase),
-                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
-
-        public string DlrLanguage
-        {
-            get { return (string)GetValue(DlrLanguageProperty); }
-            set { SetValue(DlrLanguageProperty, value); }
-        }
-
-        //helper property to retrieve the engine for the current language
-        ScriptRuntime _runtime;
-        protected ScriptEngine Engine
-        {
-            get
-            {
-                if (_runtime == null)
-                {
-                    var setup = ScriptRuntimeSetup.ReadConfiguration();
-                    _runtime = new ScriptRuntime(setup);
-                }
-                return _runtime.GetEngine(this.DlrLanguage);
-            }
-        }
-
         protected abstract IEnumerable<TokenInfo> TokenizeText();
 
         //Render the text in the text box, using the specified background color and syntax
