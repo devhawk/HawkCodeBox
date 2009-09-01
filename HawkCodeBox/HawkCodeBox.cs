@@ -112,13 +112,16 @@ namespace DevHawk.Windows.Controls
             if (!tokenizer.IsRestartable)
                 tokens.Clear();
 
-            var last_valid_token = tokens.FindLast(ct => ct.Token.SourceSpan.End.Index < offset);
+            //Find the last token that comes before the min change offset, if there is one
+            var last_valid_token_index = tokens.FindLastIndex(ct => ct.Token.SourceSpan.End.Index < offset);
 
-            if (last_valid_token != null)
+            if (last_valid_token_index >= 0)
             {
-                var i = tokens.IndexOf(last_valid_token) + 1;
-                tokens.RemoveRange(i, tokens.Count - i);
+                //If there is a last valid token, clear all the tokens after it from 
+                tokens.RemoveRange(last_valid_token_index + 1, tokens.Count - last_valid_token_index - 1);
 
+                //Initialize the tokenizer with the remaining text after the last valid token
+                var last_valid_token = tokens[last_valid_token_index];
                 tokenizer.Initialize(
                     last_valid_token.TokenizerState,
                     Engine.CreateScriptSourceFromString(
@@ -127,12 +130,15 @@ namespace DevHawk.Windows.Controls
             }
             else
             {
+                //If there are no valid tokens, initialize the tokenizer with the 
+                //entire text
                 tokenizer.Initialize(
                     null,
                     Engine.CreateScriptSourceFromString(Text),
                     SourceLocation.MinValue);
             }
 
+            //iterate over the tokens read from the tokenizer and add them to the token cache
             TokenInfo token;
             while ((token = tokenizer.ReadToken()).Category != TokenCategory.EndOfStream)
             {
@@ -149,6 +155,4 @@ namespace DevHawk.Windows.Controls
             return tokens.Select(ct => ct.Token);
         }
     }
-
-
 }
