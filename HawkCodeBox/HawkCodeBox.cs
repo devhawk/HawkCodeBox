@@ -52,12 +52,17 @@ namespace DevHawk.Windows.Controls
         //Using a DependencyProperty to store the DLR language name used to colorize the text
         public static readonly DependencyProperty LanguageProperty =
             DependencyProperty.Register("Language", typeof(string), typeof(HawkCodeBoxBase),
-                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, OnLanguageChanged));
 
         public string Language
         {
             get { return (string)GetValue(LanguageProperty); }
             set { SetValue(LanguageProperty, value); }
+        }
+
+        static void OnLanguageChanged(DependencyObject obj, DependencyPropertyChangedEventArgs args)
+        {
+            ((HawkCodeBox)obj).BuildTokenCache(0);
         }
 
         //helper property to retrieve the engine for the current language
@@ -81,108 +86,62 @@ namespace DevHawk.Windows.Controls
             public object TokenizerState { get; set; }
         }
 
-        List<CachedToken> tokens;
-
-        private CachedToken FindChangePoint(int offset)
-        {
-            CachedToken prev = null;
-            foreach (var token in tokens)
-            {
-                if (token.Token.SourceSpan.End.Index < offset)
-                {
-                    prev = token;
-                    continue;
-                }
-
-                return prev;
-            }
-
-            return null;
-        }
-
-        private void InitTokenizer(TokenCategorizer tokenizer)
-        {
-            if (tokens.Count > 0)
-            {
-                var lastToken = tokens.Last();
-                var source = Engine.CreateScriptSourceFromString(
-                    this.Text.Substring(lastToken.Token.SourceSpan.End.Index));
-                tokenizer.Initialize(
-                    lastToken.TokenizerState, 
-                    source,
-                    lastToken.Token.SourceSpan.End);
-            }
-            else
-            {
-                var source = Engine.CreateScriptSourceFromString(this.Text);
-                tokenizer.Initialize(null, source, SourceLocation.MinValue);
-            }
-        }
+        List<CachedToken> tokens = new List<CachedToken>();
 
         protected override void OnTextChanged(TextChangedEventArgs e)
         {
+            base.OnTextChanged(e);
+
+            var offset = e.Changes.Select(c => c.Offset).Min();
+            BuildTokenCache(offset);
+        }
+
+        private void BuildTokenCache(int offset)
+        {
             //at design time, we won't have access to any DLR language assemblies, so don't try to colorize
-            if (!System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
+            if (System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
+                return;
+
+            //If the tokenizer isn't restartable, clear the cached tokens
+            var tokenizer = Engine.GetService<TokenCategorizer>();
+            if (!tokenizer.IsRestartable)
+                tokens.Clear();
+
+            var last_valid_token = tokens.FindLast(ct => ct.Token.SourceSpan.End.Index < offset);
+
+            if (last_valid_token != null)
             {
-                var tokenizer = Engine.GetService<TokenCategorizer>();
-                if (tokenizer.IsRestartable)
-                {
-                    if (tokens == null) tokens = new List<CachedToken>();
-                    foreach (var change in e.Changes)
-                    {
-                        CachedToken lastgood = FindChangePoint(change.Offset);
-                        if (lastgood != null)
-                        {
-                            var i = tokens.IndexOf(lastgood);
-                            tokens.RemoveRange(i+1, tokens.Count - i - 1);
-                        }
-                    }
+                var i = tokens.IndexOf(last_valid_token) + 1;
+                tokens.RemoveRange(i, tokens.Count - i);
 
-                    InitTokenizer(tokenizer);
-                    while (true)
-                    {
-                        var t = tokenizer.ReadToken();
-                        if (t.Category == TokenCategory.EndOfStream)
-                            break;
-
-                        tokens.Add(new CachedToken()
-                        {
-                            Token = t,
-                            TokenizerState = tokenizer.CurrentState
-                        });
-                    }
-                }
+                tokenizer.Initialize(
+                    last_valid_token.TokenizerState,
+                    Engine.CreateScriptSourceFromString(
+                        Text.Substring(last_valid_token.Token.SourceSpan.End.Index)),
+                    last_valid_token.Token.SourceSpan.End);
+            }
+            else
+            {
+                tokenizer.Initialize(
+                    null,
+                    Engine.CreateScriptSourceFromString(Text),
+                    SourceLocation.MinValue);
             }
 
-            base.OnTextChanged(e);
+            TokenInfo token;
+            while ((token = tokenizer.ReadToken()).Category != TokenCategory.EndOfStream)
+            {
+                tokens.Add(new CachedToken()
+                {
+                    Token = token,
+                    TokenizerState = tokenizer.CurrentState
+                });
+            }
         }
 
         protected override IEnumerable<TokenInfo> TokenizeText()
         {
-            //at design time, we won't have access to any DLR language assemblies, so don't try to colorize
-            if (!System.ComponentModel.DesignerProperties.GetIsInDesignMode(this))
-            {
-                var tokenizer = Engine.GetService<TokenCategorizer>();
-                if (!tokenizer.IsRestartable)
-                {
-                    var source = Engine.CreateScriptSourceFromString(this.Text);
-                    tokenizer.Initialize(null, source, SourceLocation.MinValue);
-                    while (true)
-                    {
-                        var t = tokenizer.ReadToken();
-                        if (t.Category == TokenCategory.EndOfStream)
-                            break;
-                        yield return t;
-                    }
-                }
-                else
-                {
-                    foreach (var ct in tokens)
-                    {
-                        yield return ct.Token;
-                    }
-                }
-            }
+            return tokens.Select(ct => ct.Token);
         }
     }
 
