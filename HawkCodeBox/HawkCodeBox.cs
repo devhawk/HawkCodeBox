@@ -104,6 +104,11 @@ namespace DevHawk.Windows.Controls
 
             //If the tokenizer isn't restartable, clear the cached tokens
             var tokenizer = Engine.GetService<TokenCategorizer>();
+            if (tokenizer == null)
+            {
+                tokens.Clear();
+                return;
+            }
             if (!tokenizer.IsRestartable)
                 tokens.Clear();
 
